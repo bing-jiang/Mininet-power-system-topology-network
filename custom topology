@@ -1,0 +1,86 @@
+#!/usr/bin/python
+"""Custom topology example
+Adding the 'topos' dict with a key/value pair to generate our newly defined
+topology enables one to pass in '--topo=mytopo' from the command line.
+"""
+ 
+from mininet.topo import Topo
+from mininet.net import Mininet
+from mininet.node import RemoteController,CPULimitedHost
+from mininet.link import TCLink
+from mininet.util import dumpNodeConnections
+from mininet.log import setLogLevel
+ 
+class MyTopo( Topo ):
+    "Simple topology example."
+ 
+    def __init__( self ):
+        "Create custom topo."
+ 
+        # Initialize topology
+        Topo.__init__( self )
+        L1 = 1
+        L2 = 2
+        L3 = 5
+        c = []
+        a = []
+        e = []
+          
+        # add core ovs  
+        for i in range( L1 ):
+         sw = self.addSwitch( 'c{}'.format( i + 1 ),controller=RemoteController, ip='127.0.0.1',protocol='tcp',port=6633)
+                c.append( sw )
+    
+        # add aggregation ovs
+        for i in range( L2 ):
+                sw = self.addSwitch( 'a{}'.format( i + 1 ) )
+                a.append( sw )
+    
+        # add edge ovs
+        for i in range( L3 ):
+                sw = self.addSwitch( 'e{}'.format( i + 1 ) )
+                e.append( sw )
+ 
+        # add links between core and aggregation ovs
+        for i in range( L1 ):
+                sw1 = c[i]
+                for sw2 in a[0:2]:
+                # self.addLink(sw2, sw1, bw=10, delay='5ms', loss=10, max_queue_size=1000, use_htb=True)
+			            self.addLink( sw2, sw1 )
+ 
+        # add links between aggregation and edge ovs
+		self.addLink( a[0], e[0] )
+self.addLink( a[0], e[1] )
+self.addLink( a[0], e[2] )
+self.addLink( a[1], e[3] )
+self.addLink( a[1], e[4] )
+ 
+        #add hosts and its links with edge ovs
+        count = 1
+        for i in range(3):
+                for i in range(2):
+                	host = self.addHost( 'h{}'.format( count ) )
+                	self.addLink( e[i], host )
+                	count += 1
+        for i in range(2):
+                for i in range(3):
+                	host = self.addHost( 'h{}'.format( count ) )
+                	self.addLink( e[i+3], host )
+                	count += 1
+
+def runExperiment():
+"Create and test a simple experiment"
+topo = MyTopo( )
+net = Mininet(topo=topo,host=CPULimitedHost, link=TCLink)
+net.start()
+print "Dumping host connections"
+dumpNodeConnections(net.hosts)
+#print "Testing network connectivity"
+#net.pingAll()
+#net.stop()
+#CLI(net)
+
+if __name__ == '__main__':
+# Tell mininet to print useful information
+setLogLevel('info')
+runExperiment()
